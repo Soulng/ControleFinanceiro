@@ -1,27 +1,30 @@
 <?php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
 
+include 'auth_check.php'; // valida sessão e define $CURRENT_USER_ID
 include 'db.php';
 
-$resultado = $conn->query(
+$stmt = $conn->prepare(
     "SELECT codigo, data_reg, descricao, categoria, tipo, valor
      FROM transacoes
+     WHERE usuario_id = ?
      ORDER BY data_reg DESC"
 );
 
-if (!$resultado) {
+if (!$stmt) {
     echo json_encode(['success' => false, 'error' => $conn->error]);
     exit;
 }
 
+$stmt->bind_param('i', $CURRENT_USER_ID);
+$stmt->execute();
+$resultado = $stmt->get_result();
+
 $transacoes = [];
 
 while ($row = $resultado->fetch_assoc()) {
-    // Usamos strtolower (mais seguro para servidores básicos)
     $tipoRaw = strtolower(trim($row['tipo']));
 
-    // Mapeia os valores que você tem no banco (Gasto/Renda ou option1/option2)
     if ($tipoRaw === 'renda' || $tipoRaw === 'option2' || $tipoRaw === 'receita') {
         $tipoNorm = 'receita';
     } else {
@@ -33,12 +36,10 @@ while ($row = $resultado->fetch_assoc()) {
         'data'      => $row['data_reg'],
         'descricao' => $row['descricao'],
         'categoria' => $row['categoria'],
-        'tipo'      => $tipoNorm, 
+        'tipo'      => $tipoNorm,
         'valor'     => (float) $row['valor'],
     ];
 }
 
-// Envia apenas o JSON e encerra o script imediatamente
 echo json_encode(['success' => true, 'transacoes' => $transacoes]);
-exit; 
- 
+exit;

@@ -308,23 +308,15 @@
     document.getElementById('dataAtual').textContent =
       new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-      // Seleciona o botão de logout que criamos
-const btnLogout = document.getElementById('btn-logout');
-
-btnLogout.addEventListener('click', function(e) {
-    e.preventDefault(); // Evita que o link tente navegar sozinho
-
-    // 1. Limpa os dados de identificação do usuário
-    localStorage.removeItem('currentUserId');
-    
-    // 2. Opcional: Se você usa Session no PHP, pode ser necessário 
-    // chamar um arquivo 'logout.php' aqui, mas para o seu modelo 
-    // de localStorage, apenas remover o ID já resolve.
-
-    // 3. Redireciona para a página de login/index
-    alert('Saindo do sistema...');
-    window.location.href = 'index.html'; // Ajuste para o nome do seu arquivo de login
-});
+    // Logout — destrói a sessão PHP antes de redirecionar
+    document.getElementById('btn-logout').addEventListener('click', function (e) {
+        e.preventDefault();
+        fetch('logout.php', { method: 'POST', credentials: 'same-origin' })
+            .finally(() => {
+                localStorage.removeItem('currentUserName');
+                window.location.href = 'index.html';
+            });
+    });
 
     /* ============================================================
        UTILITÁRIO
@@ -340,12 +332,13 @@ btnLogout.addEventListener('click', function(e) {
        que este dashboardnew.html e que o db.php.
     ============================================================ */
     function carregarDados() {
-      fetch('get_transacoes.php')
+      fetch('get_transacoes.php', { credentials: 'same-origin' })
         .then(function(response) {
           if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
           return response.json();
         })
         .then(function(json) {
+          if (!json.success && json.redirect) { window.location.href = json.redirect; return; }
           if (!json.success) throw new Error(json.error || 'Erro desconhecido');
           renderizarDashboard(json.transacoes);
         })

@@ -1,28 +1,24 @@
 <?php
-session_start();
 header('Content-Type: application/json');
+
+include 'auth_check.php'; // valida sessão e define $CURRENT_USER_ID
 include 'db.php';
 
-$user_id = null;
-if (isset($_SESSION['user_id'])) {
-    $user_id = $_SESSION['user_id'];
-} elseif (isset($_GET['id']) && ctype_digit($_GET['id'])) {
-    $user_id = (int) $_GET['id'];
-}
+// REMOVIDO: o bypass por $_GET['id'] que permitia ver dados de qualquer usuário.
+// Agora o ID vem EXCLUSIVAMENTE da sessão PHP, via auth_check.php.
 
-if (!$user_id) {
-    echo json_encode(['success' => false, 'error' => 'Usuário não logado']);
-    exit;
-}
+$stmt = $conn->prepare(
+    "SELECT nome, email, data_nascimento, idade, ocupacao
+     FROM usuarios
+     WHERE id = ?"
+);
 
-
-$stmt = $conn->prepare("SELECT nome, email, data_nascimento, idade, ocupacao FROM usuarios WHERE id = ?");
 if (!$stmt) {
     echo json_encode(['success' => false, 'error' => $conn->error]);
     exit;
 }
 
-$stmt->bind_param('i', $user_id);
+$stmt->bind_param('i', $CURRENT_USER_ID);
 $stmt->execute();
 $result = $stmt->get_result();
 

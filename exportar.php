@@ -1,14 +1,6 @@
 <?php
 error_reporting(0);
 date_default_timezone_set('America/Sao_Paulo');
-/**
- * Finance Easy — API de Exportacao
- * ---------------------------------
- * GET ?formato=excel  → baixa .csv (abre direto no Excel)
- * GET ?formato=pdf    → baixa .pdf  (requer pasta fpdf/ — veja README_EXPORTAR.md)
- *
- * Coloque este arquivo em: /codigos/exportar.php
- */
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
@@ -19,15 +11,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+include 'auth_check.php'; // valida sessão e define $CURRENT_USER_ID
 include 'db.php';
 
 // ─────────────────────────────────────────────
-// Busca transacoes
+// Busca transações APENAS do usuário logado
 // ─────────────────────────────────────────────
-$resT = $conn->query(
+$stmtT = $conn->prepare(
     "SELECT codigo, data_reg, descricao, categoria, tipo, valor
-     FROM transacoes ORDER BY data_reg DESC"
+     FROM transacoes
+     WHERE usuario_id = ?
+     ORDER BY data_reg DESC"
 );
+$stmtT->bind_param('i', $CURRENT_USER_ID);
+$stmtT->execute();
+$resT = $stmtT->get_result();
 
 $transacoes    = [];
 $totalReceitas = 0;
@@ -52,12 +50,17 @@ while ($row = $resT->fetch_assoc()) {
 }
 
 // ─────────────────────────────────────────────
-// Busca metas
+// Busca metas APENAS do usuário logado
 // ─────────────────────────────────────────────
-$resM  = $conn->query(
+$stmtM = $conn->prepare(
     "SELECT nome_meta, valor_total, valor_guardado, descricao
-     FROM metas ORDER BY id DESC"
+     FROM metas
+     WHERE usuario_id = ?
+     ORDER BY id DESC"
 );
+$stmtM->bind_param('i', $CURRENT_USER_ID);
+$stmtM->execute();
+$resM = $stmtM->get_result();
 
 $metas = [];
 while ($row = $resM->fetch_assoc()) {
@@ -107,9 +110,8 @@ function exportarExcel($transacoes, $metas, $saldo, $receitas, $despesas)
     header('Pragma: no-cache');
 
     $out = fopen('php://output', 'w');
-    fputs($out, "\xEF\xBB\xBF"); // BOM UTF-8 (necessario para Excel)
+    fputs($out, "\xEF\xBB\xBF"); // BOM UTF-8 (necessário para Excel)
 
-    // Resumo
     fputcsv($out, ['=== RESUMO DO DASHBOARD ==='], ';');
     fputcsv($out, ['Data de exportacao', date('d/m/Y H:i:s')], ';');
     fputcsv($out, ['Saldo Atual',        'R$ ' . number_format($saldo,    2, ',', '.')], ';');
@@ -118,7 +120,6 @@ function exportarExcel($transacoes, $metas, $saldo, $receitas, $despesas)
     fputcsv($out, ['Total de Transacoes', count($transacoes)], ';');
     fputcsv($out, [''], ';');
 
-    // Transacoes
     fputcsv($out, ['=== TRANSACOES ==='], ';');
     fputcsv($out, ['Codigo', 'Data', 'Descricao', 'Categoria', 'Tipo', 'Valor (R$)'], ';');
     foreach ($transacoes as $t) {
@@ -133,7 +134,6 @@ function exportarExcel($transacoes, $metas, $saldo, $receitas, $despesas)
     }
     fputcsv($out, [''], ';');
 
-    // Metas
     fputcsv($out, ['=== METAS FINANCEIRAS ==='], ';');
     fputcsv($out, ['Nome', 'Descricao', 'Valor Total (R$)', 'Valor Guardado (R$)', 'Progresso (%)'], ';');
     foreach ($metas as $m) {
@@ -170,9 +170,7 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
 
     require $fpdfPath;
 
-    // Converte UTF-8 para Latin-1 (necessario para o FPDF exibir acentos)
     function u($str) { return utf8_decode($str); }
-
 
     class FinancePDF extends FPDF
     {
@@ -190,7 +188,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
     $pdf->SetAutoPageBreak(true, 18);
     $pdf->AddPage();
 
-    // ── Faixa de cabecalho verde ──
     $pdf->SetFillColor(32, 178, 140);
     $pdf->Rect(0, 0, 210, 22, 'F');
     $pdf->SetFont('Arial', 'B', 16);
@@ -201,7 +198,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
     $pdf->Cell(0, 0, 'Gerado em: ' . date('d/m/Y H:i'), 0, 1, 'C');
     $pdf->Ln(10);
 
-    // ── Resumo (4 boxes lado a lado) ──
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->SetTextColor(50, 50, 50);
     $pdf->Cell(0, 7, 'Resumo do Dashboard', 0, 1);
@@ -233,7 +229,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
     }
     $pdf->SetY($yBoxes + 20);
 
-    // ── Tabela Transacoes ──
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->SetTextColor(50, 50, 50);
     $pdf->Cell(0, 7, 'Transacoes', 0, 1);
@@ -267,7 +262,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
         $pdf->SetTextColor(60, 60, 60);
     }
 
-    // ── Resumo por Categoria (espelho dos graficos da dashboard) ──
     $pdf->Ln(5);
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->SetTextColor(50, 50, 50);
@@ -275,7 +269,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
     $pdf->Line(14, $pdf->GetY(), 196, $pdf->GetY());
     $pdf->Ln(2);
 
-    // Agrupa transacoes por categoria
     $porCategoria = array();
     foreach ($transacoes as $t) {
         $cat = $t['categoria'];
@@ -315,7 +308,6 @@ function exportarPDF($transacoes, $metas, $saldo, $receitas, $despesas)
         $alt = !$alt;
     }
 
-        // ── Tabela Metas ──
     if (!empty($metas)) {
         $pdf->Ln(5);
         $pdf->SetFont('Arial', 'B', 10);

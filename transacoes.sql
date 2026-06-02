@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Máquina: localhost
--- Data de Criação: 04-Abr-2026 às 20:33
+-- Data de Criação: 02-Jun-2026 às 00:07
 -- Versão do servidor: 5.6.13
 -- versão do PHP: 5.4.17
 
@@ -33,15 +33,22 @@ CREATE TABLE IF NOT EXISTS `transacoes` (
   `categoria` varchar(20) NOT NULL,
   `tipo` varchar(20) NOT NULL,
   `valor` decimal(10,2) NOT NULL,
+  `usuario_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`codigo`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1775334150173 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1780357452618 ;
 
 --
 -- Extraindo dados da tabela `transacoes`
 --
 
-INSERT INTO `transacoes` (`codigo`, `data_reg`, `descricao`, `categoria`, `tipo`, `valor`) VALUES
-(1775334114732, '2026-04-08', 'fasfa', 'Educação', 'Renda', '3213.00');
+INSERT INTO `transacoes` (`codigo`, `data_reg`, `descricao`, `categoria`, `tipo`, `valor`, `usuario_id`) VALUES
+(1779149739524, '2026-02-12', 'Comida', 'Alimentação', 'Renda', '350.00', NULL),
+(1779149763777, '2026-04-29', 'Uber', 'Transporte', 'Gasto', '225.00', NULL),
+(1779155481931, '2026-05-06', 'Sonegar', 'Impostos', 'Renda', '500.00', NULL),
+(1779324330692, '2026-05-06', 'TeleCurso', 'Educação', 'Renda', '750.00', NULL),
+(1779324354579, '2026-04-27', 'Poupança', 'Emergência', 'Renda', '95.00', NULL),
+(1779324385955, '2026-04-28', 'Agiota', 'Despesa', 'Gasto', '320.00', NULL),
+(1780357452617, '2026-06-02', '99', 'Transporte', 'Renda', '150.00', NULL);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
