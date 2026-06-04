@@ -22,7 +22,7 @@ function cadastrarUsuario() {
     const ocupacao   = document.getElementById('signup-ocupacao').value.trim();
 
     if (!nome || !email || !senha || !nascimento) {
-        alert('Por favor, preencha nome, email, senha e data de nascimento.');
+        showToast('warn', 'Campos obrigatórios', 'Preencha nome, email, senha e nascimento.')
         return;
     }
 
@@ -35,7 +35,7 @@ function cadastrarUsuario() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Cadastro realizado com sucesso!');
+            showToast('success', 'Cadastro realizado!', 'Bem-vindo ao Finance Easy.')
             document.getElementById('signup-form').reset();
             container.classList.remove('right-panel-active');
         } else {
@@ -44,16 +44,17 @@ function cadastrarUsuario() {
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao enviar cadastro.');
+        showToast('error', 'Erro no cadastro', data.error)
     });
 }
+
 
 function loginUsuario() {
     const email = document.getElementById('login-email').value.trim();
     const senha = document.getElementById('login-senha').value;
 
     if (!email || !senha) {
-        alert('Por favor, preencha email e senha.');
+        showToast('warn', 'Campos obrigatórios', 'Preencha email e senha.')
         return;
     }
 
@@ -68,13 +69,19 @@ function loginUsuario() {
         if (data.success) {
             // localStorage mantido APENAS para exibição do nome na tela (não é usado como auth)
             localStorage.setItem('currentUserName', data.user_name);
+            showToast('success', 'Login realizado com sucesso!');
+        setTimeout(() => {
             window.location.href = 'home.html';
+        }, 1500);
         } else {
-            alert('Erro no login: ' + data.error);
+            showToast('error', 'Erro no login', data.error)
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao enviar login.');
+        showToast('error', 'Erro no login', data.error);
     });
+    
 }
+
+

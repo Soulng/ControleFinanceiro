@@ -53,7 +53,7 @@ formAddReg.addEventListener('submit', (e) => {
     ) || 0;
 
     if (!dataReg || !descReg || valorReg <= 0) {
-        alert('Por favor, preencha todos os campos!');
+        showToast('warn', 'Campos obrigatórios', 'Por favor, preencha todos os campos!');
         return;
     }
 

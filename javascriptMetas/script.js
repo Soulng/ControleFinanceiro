@@ -69,7 +69,8 @@ function salvarMeta() {
     const iconeURL   = document.getElementById("iconeURL").value;
 
     if (!nome || !valorTotal) {
-        alert('Nome e valor total são obrigatórios!');
+        showToast('warn', 'Nome e valor total são obrigatórios!', 'abraços')
+        alert('Nome e valor total são obrddddddddddddddddddddddigatórios!');
         return;
     }
 
