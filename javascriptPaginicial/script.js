@@ -80,19 +80,19 @@ formAddReg.addEventListener('submit', (e) => {
             renderTable();
             formAddReg.reset();
             document.querySelector('.popup-form-add').style.display = 'none';
-            alert('Registro salvo com sucesso!');
+            showToast('success', 'Sucesso!', 'Registro salvo com sucesso!');
         } else {
             if (data.redirect) {
-                alert('Sessão expirada. Faça login novamente.');
+                showToast('warn', 'Sessão Expirada', 'Faça login novamente.');
                 window.location.href = data.redirect;
                 return;
             }
-            alert('Erro no servidor: ' + data.error);
+            showToast('error', 'Erro no Servidor', data.error);
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao conectar com o servidor.');
+        showToast('error', 'Falha na Conexão', 'Erro ao conectar com o servidor.');
     });
 });
 
@@ -206,31 +206,32 @@ function removeRegistro(codigoParaRemover) {
         if (data.success) {
             transacoes = transacoes.filter(t => String(t.codigo) !== String(codigoParaRemover));
             renderTable();
-            alert('Registro removido com sucesso!');
+            showToast('success', 'Sucesso!', 'Registro removido com sucesso!');
         } else {
             if (data.redirect) {
-                alert('Sessão expirada. Faça login novamente.');
+                showToast('warn', 'Sessão Expirada', 'Faça login novamente.');
                 window.location.href = data.redirect;
                 return;
             }
-            alert('Erro ao deletar: ' + data.error);
+            showToast('error', 'Erro ao Deletar', data.error);
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao conectar com o servidor para excluir.');
+        showToast('error', 'Erro ao conectar com o servidor para excluir.', data.error);
     });
 }
 
 // Delegação de evento na tabela para o botão Remover
-document.querySelector('.extrato table tbody').addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-remove')) {
-        const codigo = e.target.dataset.codeRem;
-        if (confirm('Tem certeza que deseja remover este registro permanentemente?')) {
-            removeRegistro(codigo);
+    document.querySelector('.extrato table tbody').addEventListener('click', async (e) => {
+        if (e.target.classList.contains('btn-remove')) {
+            const codigo = e.target.dataset.codeRem;
+            const confirmado = await showConfirm('Atenção!', 'Tem certeza que deseja remover este registro permanentemente?');
+            if (confirmado) {
+                removeRegistro(codigo);
+            }
         }
-    }
-});
+    });
 
 // ── Carregamento inicial do banco (não do localStorage) ───
 function loadTransactions() {

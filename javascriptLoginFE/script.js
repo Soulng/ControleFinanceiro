@@ -22,7 +22,7 @@ function cadastrarUsuario() {
     const ocupacao   = document.getElementById('signup-ocupacao').value.trim();
 
     if (!nome || !email || !senha || !nascimento) {
-        showToast('warn', 'Campos obrigatórios', 'Preencha nome, email, senha e nascimento.')
+        showToast('warn', 'Campos obrigatórios', 'Preencha nome, email, senha e nascimento.');
         return;
     }
 
@@ -35,7 +35,7 @@ function cadastrarUsuario() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showToast('success', 'Cadastro realizado!', 'Bem-vindo ao Finance Easy.')
+            showToast('success', 'Cadastro realizado!', 'Bem-vindo ao Finance Easy.');
             document.getElementById('signup-form').reset();
             container.classList.remove('right-panel-active');
         } else {
@@ -44,7 +44,7 @@ function cadastrarUsuario() {
     })
     .catch(error => {
         console.error('Erro:', error);
-        showToast('error', 'Erro no cadastro', data.error)
+        showToast('error', 'Erro no cadastro', data.error);
     });
 }
 
@@ -54,7 +54,7 @@ function loginUsuario() {
     const senha = document.getElementById('login-senha').value;
 
     if (!email || !senha) {
-        showToast('warn', 'Campos obrigatórios', 'Preencha email e senha.')
+        showToast('warn', 'Campos obrigatórios', 'Preencha email e senha.');
         return;
     }
 
@@ -74,12 +74,12 @@ function loginUsuario() {
             window.location.href = 'home.html';
         }, 1500);
         } else {
-            showToast('error', 'Erro no login', data.error)
+            showToast('error', 'E-MAIL ou Senha incorretos', data.error);
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        showToast('error', 'Erro no login', data.error);
+        showToast('error', 'E-MAIL ou Senha incorretos', data.error);
     });
     
 }

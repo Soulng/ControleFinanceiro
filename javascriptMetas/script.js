@@ -69,8 +69,7 @@ function salvarMeta() {
     const iconeURL   = document.getElementById("iconeURL").value;
 
     if (!nome || !valorTotal) {
-        showToast('warn', 'Nome e valor total são obrigatórios!', 'abraços')
-        alert('Nome e valor total são obrddddddddddddddddddddddigatórios!');
+        showToast('warn', 'Nome e valor total são obrigatórios!');        
         return;
     }
 
@@ -89,18 +88,19 @@ function salvarMeta() {
             carregarMetas();
         } else {
             if (data.redirect) {
-                alert('Sessão expirada. Faça login novamente.');
+                showToast('error', 'Sessão expirada. Faça login novamente.', data.error);
                 window.location.href = data.redirect;
                 return;
             }
-            alert('Erro ao salvar meta: ' + data.error);
+            showToast('Erro ao salvar meta: ', data.error);
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao salvar meta');
+        showToast('Erro ao salvar meta: ', data.error);
     });
 }
+
 
 function removerMeta(id) {
     if (confirm('Tem certeza que deseja remover esta meta?')) {
@@ -116,19 +116,20 @@ function removerMeta(id) {
                 carregarMetas();
             } else {
                 if (data.redirect) {
-                    alert('Sessão expirada. Faça login novamente.');
+                    showToast('error', 'Sessão expirada. Faça login novamente.', data.error);
                     window.location.href = data.redirect;
                     return;
                 }
-                alert('Erro ao remover meta: ' + data.error);
+                showToast('error', 'Erro ao remover meta: ', data.error);
             }
         })
         .catch(error => {
             console.error('Erro:', error);
-            alert('Erro ao remover meta');
+            showToast('error', 'Erro ao remover meta: ', data.error);
         });
     }
 }
+
 
 function renderizarMetas() {
     const container = document.getElementById("metas");

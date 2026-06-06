@@ -29,4 +29,46 @@ function showToast(tipo, titulo) {
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
   }
-  // ─────────────────────────────────────────────────────────
+
+
+  // ── Confirm Customizado ──────────────────────────────────
+  function showConfirm(titulo, mensagem) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+
+        const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        const confirmBox = document.createElement('div');
+        confirmBox.className = 'confirm-box';
+
+        confirmBox.innerHTML = `
+            <div class="confirm-header">
+                <div class="confirm-icon">❓</div>
+                <p class="confirm-title">${titulo}</p>
+                <p class="confirm-message">${mensagem}</p>
+            </div>
+            <div class="confirm-actions">
+                <button class="confirm-btn confirm-btn-cancel" id="btn-confirm-cancel">Cancelar</button>
+                <button class="confirm-btn confirm-btn-ok"     id="btn-confirm-ok">Confirmar</button>
+            </div>
+            <div class="confirm-footer">
+                <span>Finance Easy</span>
+                <span>${agora}</span>
+            </div>
+        `;
+
+        overlay.appendChild(confirmBox);
+        document.body.appendChild(overlay);
+
+        confirmBox.querySelector('#btn-confirm-cancel').addEventListener('click', () => {
+            overlay.remove();
+            resolve(false);
+        });
+
+        confirmBox.querySelector('#btn-confirm-ok').addEventListener('click', () => {
+            overlay.remove();
+            resolve(true);
+        });
+    });
+}
