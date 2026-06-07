@@ -16,8 +16,22 @@ btnExpandir.addEventListener('click', function () {
     conteudoMain.classList.toggle('expandir');
 });
 
+// ── Dark Mode (padrão dashboard/investimentos) ─────────────
+function aplicarTema(tema) {
+    document.documentElement.setAttribute('data-tema', tema);
+    const escuro = tema === 'escuro';
+    document.getElementById('iconeTema').className = escuro ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    document.getElementById('textoTema').textContent = escuro ? 'Modo Claro' : 'Modo Escuro';
+    localStorage.setItem('financeTema', tema);
+}
+function alternarTema() {
+    const atual = document.documentElement.getAttribute('data-tema');
+    aplicarTema(atual === 'escuro' ? 'claro' : 'escuro');
+}
+aplicarTema(localStorage.getItem('financeTema') || 'claro');
+
 // ── Popup do formulário ───────────────────────────────────
-const btnAbrirFormAdd = document.querySelector('.btn-add-gastos');
+const btnAbrirFormAdd  = document.querySelector('.btn-add-gastos');
 const btnFecharFormAdd = document.querySelector('.btn-fechar-form');
 
 btnAbrirFormAdd.addEventListener('click', function () {
@@ -27,14 +41,57 @@ btnFecharFormAdd.addEventListener('click', function () {
     document.querySelector('.popup-form-add').style.display = 'none';
 });
 
-// ── Exibe nome do usuário (do localStorage — apenas cosmético) ──
+// ── Exibe nome do usuário ──────────────────────────────────
 const nomeDisplay = document.getElementById('user-nome-display');
 if (nomeDisplay) {
     nomeDisplay.textContent = localStorage.getItem('currentUserName') || '';
 }
 
-// ── Estado local de transações (cache em memória) ─────────
+// ── Estado local de transações ────────────────────────────
 let transacoes = [];
+
+// ── Filtros ────────────────────────────────────────────────
+const filtroTipo     = document.getElementById('filtro-tipo');
+const filtroCateg    = document.getElementById('filtro-categoria');
+const filtroDataIni  = document.getElementById('filtro-data-ini');
+const filtroDataFim  = document.getElementById('filtro-data-fim');
+const filtroBusca    = document.getElementById('filtro-busca');
+const btnLimpar      = document.getElementById('btn-limpar-filtros');
+
+[filtroTipo, filtroCateg, filtroDataIni, filtroDataFim].forEach(el =>
+    el.addEventListener('change', renderTable)
+);
+filtroBusca.addEventListener('input', renderTable);
+
+btnLimpar.addEventListener('click', () => {
+    filtroTipo.value    = '';
+    filtroCateg.value   = '';
+    filtroDataIni.value = '';
+    filtroDataFim.value = '';
+    filtroBusca.value   = '';
+    renderTable();
+});
+
+function getTransacoesFiltradas() {
+    const tipo    = filtroTipo.value.toLowerCase();
+    const categ   = filtroCateg.value.toLowerCase();
+    const dataIni = filtroDataIni.value;
+    const dataFim = filtroDataFim.value;
+    const busca   = filtroBusca.value.toLowerCase().trim();
+
+    return transacoes.filter(t => {
+        const tipoRaw = (t.tipo || '').toLowerCase();
+        const isGasto = (tipoRaw === 'gasto' || tipoRaw === 'despesa' || tipoRaw === 'option1');
+        const tipoNorm = isGasto ? 'despesa' : 'receita';
+
+        if (tipo   && tipoNorm !== tipo)                              return false;
+        if (categ  && (t.categoria || '').toLowerCase() !== categ)   return false;
+        if (dataIni && t.data < dataIni)                             return false;
+        if (dataFim && t.data > dataFim)                             return false;
+        if (busca  && !(t.descricao || '').toLowerCase().includes(busca)) return false;
+        return true;
+    });
+}
 
 // ── Formulário de adição ──────────────────────────────────
 const formAddReg = document.querySelector('.form-add-mov');
@@ -42,10 +99,10 @@ const formAddReg = document.querySelector('.form-add-mov');
 formAddReg.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const dataReg  = document.getElementById('extrato-data').value;
-    const descReg  = document.getElementById('descricao-form').value;
-    const categReg = document.getElementById('extrato-categ');
-    const tipoReg  = document.getElementById('extrato-tipo');
+    const dataReg    = document.getElementById('extrato-data').value;
+    const descReg    = document.getElementById('descricao-form').value;
+    const categReg   = document.getElementById('extrato-categ');
+    const tipoReg    = document.getElementById('extrato-tipo');
     const inputValor = document.getElementById('valor-form');
 
     const valorReg = parseFloat(
@@ -53,7 +110,7 @@ formAddReg.addEventListener('submit', (e) => {
     ) || 0;
 
     if (!dataReg || !descReg || valorReg <= 0) {
-        showToast('warn', 'Campos obrigatórios', 'Por favor, preencha todos os campos!');
+        showToast('warn', 'Campos obrigatórios — preencha todos os campos!');
         return;
     }
 
@@ -72,84 +129,61 @@ formAddReg.addEventListener('submit', (e) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(novoRegistro)
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Adiciona ao cache local e re-renderiza sem precisar recarregar do banco
             transacoes.push(novoRegistro);
             renderTable();
             formAddReg.reset();
             document.querySelector('.popup-form-add').style.display = 'none';
-            showToast('success', 'Sucesso!', 'Registro salvo com sucesso!');
+            showToast('success', 'Registro salvo com sucesso!');
         } else {
             if (data.redirect) {
-                showToast('warn', 'Sessão Expirada', 'Faça login novamente.');
+                showToast('warn', 'Sessão expirada. Faça login novamente.');
                 window.location.href = data.redirect;
                 return;
             }
-            showToast('error', 'Erro no Servidor', data.error);
+            showToast('error', data.error || 'Erro ao salvar.');
         }
     })
-    .catch(error => {
-        console.error('Erro:', error);
-        showToast('error', 'Falha na Conexão', 'Erro ao conectar com o servidor.');
-    });
+    .catch(() => showToast('error', 'Falha na conexão com o servidor.'));
 });
 
 // ── Renderização da tabela ────────────────────────────────
 function renderTable() {
-    const tableBody = document.querySelector('.extrato table tbody');
+    const tableBody = document.querySelector('.tabela-extrato tbody');
     tableBody.innerHTML = '';
 
-    let currentBalance = 0;
+    const lista = getTransacoesFiltradas();
 
-    if (transacoes.length === 0) {
+    if (lista.length === 0) {
         const emptyRow  = tableBody.insertRow();
         const emptyCell = emptyRow.insertCell();
         emptyCell.colSpan = 8;
         emptyCell.style.textAlign = 'center';
         emptyCell.style.padding   = '2rem';
 
-        const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#97959556" class="bi bi-card-list" viewBox="0 0 16 16">
-            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z"/>
-            <path d="M5 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 5 8m0-2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0 5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-1-5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0M4 8a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m0 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
-            </svg>`;
+        const msg = document.createElement('p');
+        msg.textContent = transacoes.length === 0
+            ? 'Nenhum registro encontrado. Adicione sua primeira transação!'
+            : 'Nenhum registro encontrado para os filtros aplicados.';
+        msg.style.cssText = 'color:var(--text-muted);font-size:0.95rem;';
+        emptyCell.appendChild(msg);
 
-        const imgSrc = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgMarkup)}`;
-
-        const emptyContent    = document.createElement('div');
-        emptyContent.className = 'empty-state';
-        emptyContent.style.cssText = 'display:inline-block;max-width:100%;text-align:center;';
-
-        const emptyImage    = document.createElement('img');
-        emptyImage.src      = imgSrc;
-        emptyImage.alt      = 'Nenhum registro encontrado';
-        emptyImage.style.cssText = 'max-width:220px;width:100%;height:auto;margin-bottom:1rem;';
-
-        const message = document.createElement('p');
-        message.textContent = 'Nenhum registro encontrado. Adicione sua primeira transação!';
-        message.style.cssText = 'margin:0;color:#666;font-size:0.95rem;';
-
-        emptyContent.appendChild(emptyImage);
-        emptyContent.appendChild(message);
-        emptyCell.appendChild(emptyContent);
-
-        atualizarSaldo(0);
+        // Saldo considera todas as transações, não apenas as filtradas
+        atualizarSaldo(calcularSaldo(transacoes));
         return;
     }
 
-    transacoes.forEach(t => {
+    // Saldo corrido calculado sobre a lista filtrada
+    let currentBalance = 0;
+
+    lista.forEach(t => {
         const amount  = t.valor;
-        // Aceita tanto o formato do banco ('receita'/'despesa')
-        // quanto o formato do formulário ('Renda'/'Gasto')
         const tipoRaw = (t.tipo || '').toLowerCase();
         const isGasto = (tipoRaw === 'gasto' || tipoRaw === 'despesa' || tipoRaw === 'option1');
 
-        if (isGasto) {
-            currentBalance -= amount;
-        } else {
-            currentBalance += amount;
-        }
+        currentBalance += isGasto ? -amount : amount;
 
         const newRow = tableBody.insertRow();
 
@@ -159,7 +193,7 @@ function renderTable() {
 
         const typeCell = newRow.insertCell();
         typeCell.textContent = t.tipo;
-        typeCell.style.color = isGasto ? '#ee2626ff' : '#31c931ff';
+        typeCell.style.color = isGasto ? '#ee2626' : '#31c931';
 
         newRow.insertCell().textContent = t.categoria;
 
@@ -167,7 +201,6 @@ function renderTable() {
         const valorFormatado = amount.toLocaleString('pt-BR', {
             style: 'currency', currency: 'BRL', minimumFractionDigits: 2
         }).replace('R$', '');
-
         valorCell.textContent = isGasto ? `- ${valorFormatado}` : `+ ${valorFormatado}`;
         valorCell.style.color = isGasto ? '#df0a0a' : '#0de40d';
 
@@ -177,13 +210,22 @@ function renderTable() {
 
         const actionsCell = newRow.insertCell();
         const removeBtn   = document.createElement('button');
-        removeBtn.textContent      = 'Remover';
-        removeBtn.className        = 'btn-action btn-remove';
-        removeBtn.dataset.codeRem  = t.codigo;
+        removeBtn.textContent     = 'Remover';
+        removeBtn.className       = 'btn-action btn-remove';
+        removeBtn.dataset.codeRem = t.codigo;
         actionsCell.appendChild(removeBtn);
     });
 
-    atualizarSaldo(currentBalance);
+    // Saldo exibido sempre reflete o total geral (sem filtro)
+    atualizarSaldo(calcularSaldo(transacoes));
+}
+
+function calcularSaldo(lista) {
+    return lista.reduce((acc, t) => {
+        const tipoRaw = (t.tipo || '').toLowerCase();
+        const isGasto = (tipoRaw === 'gasto' || tipoRaw === 'despesa' || tipoRaw === 'option1');
+        return acc + (isGasto ? -t.valor : t.valor);
+    }, 0);
 }
 
 function atualizarSaldo(valor) {
@@ -201,91 +243,62 @@ function removeRegistro(codigoParaRemover) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codigo: codigoParaRemover })
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
             transacoes = transacoes.filter(t => String(t.codigo) !== String(codigoParaRemover));
             renderTable();
-            showToast('success', 'Sucesso!', 'Registro removido com sucesso!');
+            showToast('success', 'Registro removido com sucesso!');
         } else {
             if (data.redirect) {
-                showToast('warn', 'Sessão Expirada', 'Faça login novamente.');
+                showToast('warn', 'Sessão expirada. Faça login novamente.');
                 window.location.href = data.redirect;
                 return;
             }
-            showToast('error', 'Erro ao Deletar', data.error);
+            showToast('error', data.error || 'Erro ao remover.');
         }
     })
-    .catch(error => {
-        console.error('Erro:', error);
-        showToast('error', 'Erro ao conectar com o servidor para excluir.', data.error);
-    });
+    .catch(() => showToast('error', 'Erro ao conectar com o servidor.'));
 }
 
-// Delegação de evento na tabela para o botão Remover
-    document.querySelector('.extrato table tbody').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('btn-remove')) {
-            const codigo = e.target.dataset.codeRem;
-            const confirmado = await showConfirm('Atenção!', 'Tem certeza que deseja remover este registro permanentemente?');
-            if (confirmado) {
-                removeRegistro(codigo);
-            }
-        }
-    });
+document.querySelector('.tabela-extrato tbody').addEventListener('click', async (e) => {
+    if (e.target.classList.contains('btn-remove')) {
+        const codigo = e.target.dataset.codeRem;
+        const confirmado = await showConfirm('Atenção!', 'Tem certeza que deseja remover este registro permanentemente?');
+        if (confirmado) removeRegistro(codigo);
+    }
+});
 
-// ── Carregamento inicial do banco (não do localStorage) ───
+// ── Carregamento inicial ──────────────────────────────────
 function loadTransactions() {
-    fetch('get_transacoes.php', {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-    .then(response => response.json())
+    fetch('get_transacoes.php', { method: 'GET', credentials: 'same-origin' })
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Normaliza os dados vindos do banco para o formato usado no renderTable
             transacoes = data.transacoes.map(t => ({
                 codigo:    t.codigo,
                 data:      t.data,
                 descricao: t.descricao,
                 categoria: t.categoria,
-                tipo:      t.tipo,   // 'receita' ou 'despesa'
+                tipo:      t.tipo,
                 valor:     t.valor
             }));
             renderTable();
         } else {
-            if (data.redirect) {
-                window.location.href = data.redirect;
-                return;
-            }
+            if (data.redirect) { window.location.href = data.redirect; return; }
             console.error('Erro ao carregar transações:', data.error);
-            renderTable(); // renderiza tabela vazia
+            renderTable();
         }
     })
-    .catch(error => {
-        console.error('Erro ao conectar:', error);
-        renderTable();
-    });
+    .catch(err => { console.error('Erro ao conectar:', err); renderTable(); });
 }
 
 loadTransactions();
 
 // ── Logout ────────────────────────────────────────────────
-const btnLogout = document.getElementById('btn-logout');
-
-btnLogout.addEventListener('click', function (e) {
+document.getElementById('btn-logout').addEventListener('click', function (e) {
     e.preventDefault();
-
-    fetch('logout.php', {
-        method: 'POST',
-        credentials: 'same-origin'
-    })
-    .then(() => {
-        localStorage.removeItem('currentUserName');
-        window.location.href = 'index.html';
-    })
-    .catch(() => {
-        // Mesmo com erro de rede, redireciona
-        localStorage.removeItem('currentUserName');
-        window.location.href = 'index.html';
-    });
+    fetch('logout.php', { method: 'POST', credentials: 'same-origin' })
+    .then(() => { localStorage.removeItem('currentUserName'); window.location.href = 'index.html'; })
+    .catch(() => { localStorage.removeItem('currentUserName'); window.location.href = 'index.html'; });
 });

@@ -6,10 +6,10 @@
 }
 
 body {
-	background: #F9E8C6;
+	background: #b8b8b8;
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: center;	
 	flex-direction: column;
 	font-family: 'Montserrat', sans-serif;
 	height: 100vh;
